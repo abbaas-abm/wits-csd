@@ -18,7 +18,7 @@ export function UserDashboard({
   profile: Profile;
   registrations: RegistrationWithEvent[];
 }) {
-  const [tab, setTab] = React.useState("profile");
+  const [tab, setTab] = React.useState("events");
 
   return (
     <motion.div
@@ -39,21 +39,21 @@ export function UserDashboard({
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-white p-1.5 shadow-sm">
-          <TabsTrigger value="profile">
-            <UserRound className="size-4" />
-            Profile
-          </TabsTrigger>
           <TabsTrigger value="events">
             <CalendarCheck className="size-4" />
             My Events
           </TabsTrigger>
+          <TabsTrigger value="profile">
+            <UserRound className="size-4" />
+            Profile
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile">
-          <ProfilePanel profile={profile} />
-        </TabsContent>
         <TabsContent value="events">
           <MyEventsPanel registrations={registrations} />
+        </TabsContent>
+        <TabsContent value="profile">
+          <ProfilePanel profile={profile} />
         </TabsContent>
       </Tabs>
     </motion.div>

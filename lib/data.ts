@@ -115,7 +115,12 @@ export async function getUserRegistrations(userId: string): Promise<Registration
       .eq("attendee_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw error;
-    return (data ?? []) as unknown as RegistrationWithEvent[];
+    // Most recent event (by event date) first.
+    return ((data ?? []) as unknown as RegistrationWithEvent[]).sort(
+      (a, b) =>
+        new Date(b.event?.start_date ?? 0).getTime() -
+        new Date(a.event?.start_date ?? 0).getTime(),
+    );
   } catch {
     return [];
   }

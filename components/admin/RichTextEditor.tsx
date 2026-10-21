@@ -2,6 +2,10 @@
 
 import * as React from "react";
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Bold,
   Code2,
   Eraser,
@@ -59,6 +63,10 @@ export function RichTextEditor({
           "insertUnorderedList",
         ),
         insertOrderedList: document.queryCommandState("insertOrderedList"),
+        justifyLeft: document.queryCommandState("justifyLeft"),
+        justifyCenter: document.queryCommandState("justifyCenter"),
+        justifyRight: document.queryCommandState("justifyRight"),
+        justifyFull: document.queryCommandState("justifyFull"),
       });
     } catch {
       setActive({});
@@ -160,6 +168,37 @@ export function RichTextEditor({
         </ToolButton>
         <ToolButton label="Code" onClick={() => formatBlock("PRE")}>
           <Code2 className="size-4" />
+        </ToolButton>
+
+        <Divider />
+
+        <ToolButton
+          label="Align left"
+          active={active.justifyLeft}
+          onClick={() => exec("justifyLeft")}
+        >
+          <AlignLeft className="size-4" />
+        </ToolButton>
+        <ToolButton
+          label="Align centre"
+          active={active.justifyCenter}
+          onClick={() => exec("justifyCenter")}
+        >
+          <AlignCenter className="size-4" />
+        </ToolButton>
+        <ToolButton
+          label="Align right"
+          active={active.justifyRight}
+          onClick={() => exec("justifyRight")}
+        >
+          <AlignRight className="size-4" />
+        </ToolButton>
+        <ToolButton
+          label="Justify"
+          active={active.justifyFull}
+          onClick={() => exec("justifyFull")}
+        >
+          <AlignJustify className="size-4" />
         </ToolButton>
 
         <Divider />

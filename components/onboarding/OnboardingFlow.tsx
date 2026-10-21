@@ -294,10 +294,16 @@ export function OnboardingFlow({ profile }: { profile: Profile }) {
         router.push(profile.role === "admin" ? "/admin" : "/user");
       }
     } catch (error) {
+      // Supabase errors are plain objects, not Error instances.
+      console.error("Onboarding save failed:", error);
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String(error.message)
+          : "";
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not save your details. Please try again.",
+        message.includes("profiles_phone_number_key")
+          ? "This contact number is already linked to another account. Please use a different number, or sign in with the email you used before."
+          : message || "Could not save your details. Please try again.",
       );
     } finally {
       setSaving(false);
