@@ -89,7 +89,7 @@ export function EventsExplorer({ events }: { events: EventRecord[] }) {
             Events &amp; Registration Portal
           </p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight text-balance text-white sm:text-4xl">
-            CSD Central Events &amp; Engagement Hub
+            Central Events &amp; Engagement Hub
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/85">
             Access university-wide leadership conferences, volunteer drives,
