@@ -152,11 +152,11 @@ export default async function EventDetailPage(
     <SectionPlaceholder title="Programme &amp; agenda" />
   );
 
-  const speakersSection = !event.has_speakers ? (
-    <SectionPlaceholder title="Speakers &amp; facilitators" />
-  ) : speakers.length > 0 ? (
-    <EventSpeakers speakers={speakers} />
-  ) : null;
+  // Private speakers are hidden entirely rather than shown as a placeholder.
+  const speakersSection =
+    event.has_speakers && speakers.length > 0 ? (
+      <EventSpeakers speakers={speakers} />
+    ) : null;
 
   return (
     <div className="w-full overflow-x-hidden bg-white pb-16">
