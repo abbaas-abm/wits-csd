@@ -27,6 +27,7 @@ import { roleLabel } from "@/lib/roles";
 import type { Profile, UserRole } from "@/lib/types";
 
 const PAGE_SIZE = 25;
+const ALL_EVENTS = "all";
 
 const ROLES: UserRole[] = ["user", "volunteer", "admin"];
 
@@ -44,6 +45,22 @@ export function AdminPeople() {
   const [term, setTerm] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [savingId, setSavingId] = React.useState<string | null>(null);
+  const [events, setEvents] = React.useState<{ id: string; title: string }[]>(
+    [],
+  );
+  const [eventId, setEventId] = React.useState(ALL_EVENTS);
+
+  // Events for the filter, most recent first.
+  React.useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("events")
+        .select("id, title")
+        .order("start_date", { ascending: false });
+      setEvents(data ?? []);
+    })();
+  }, []);
 
   // Debounce the search box; any change resets to the first page.
   React.useEffect(() => {
@@ -62,11 +79,24 @@ export function AdminPeople() {
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
+      // Filtering by event keeps only people with a confirmed registration.
+      const byEvent = eventId !== ALL_EVENTS;
       let request = supabase
         .from("profiles")
-        .select("*", { count: "exact" })
+        .select(
+          byEvent
+            ? "*, registrations!attendee_id!inner(event_id, status)"
+            : "*",
+          { count: "exact" },
+        )
         .order("created_at", { ascending: false })
         .range(from, to);
+
+      if (byEvent) {
+        request = request
+          .eq("registrations.event_id", eventId)
+          .eq("registrations.status", "CONFIRMED");
+      }
 
       const safe = term.replace(/[,()%\\*]/g, " ").trim();
       if (safe) {
@@ -83,14 +113,14 @@ export function AdminPeople() {
         setLoading(false);
         return;
       }
-      setRows((data ?? []) as Profile[]);
+      setRows((data ?? []) as unknown as Profile[]);
       setTotal(count ?? 0);
       setLoading(false);
     })();
     return () => {
       active = false;
     };
-  }, [term, page]);
+  }, [term, page, eventId]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -130,17 +160,39 @@ export function AdminPeople() {
           {total} {total === 1 ? "user" : "users"}
           {loading && <Loader2 className="size-3.5 animate-spin" />}
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            value={query}
-            onChange={(e) => {
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          <Select
+            value={eventId}
+            onValueChange={(value) => {
               setLoading(true);
-              setQuery(e.target.value);
+              setEventId(value);
+              setPage(1);
             }}
-            placeholder="Search users..."
-            className="pl-10"
-          />
+          >
+            <SelectTrigger className="w-full sm:w-64">
+              <SelectValue placeholder="All users" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_EVENTS}>All users</SelectItem>
+              {events.map((event) => (
+                <SelectItem key={event.id} value={event.id}>
+                  Registered: {event.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              value={query}
+              onChange={(e) => {
+                setLoading(true);
+                setQuery(e.target.value);
+              }}
+              placeholder="Search users..."
+              className="pl-10"
+            />
+          </div>
         </div>
       </div>
 
@@ -157,7 +209,11 @@ export function AdminPeople() {
             No users found
           </h3>
           <p className="mt-1 text-sm text-gray-600">
-            {term ? "Try a different search term." : "No users yet."}
+            {term
+              ? "Try a different search term."
+              : eventId !== ALL_EVENTS
+                ? "Nobody has registered for this event yet."
+                : "No users yet."}
           </p>
         </Card>
       ) : (
@@ -253,7 +309,9 @@ export function AdminPeople() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    goToPage(Math.min(totalPages, currentPage + 1))
+                  }
                   disabled={currentPage === totalPages || loading}
                 >
                   Next
