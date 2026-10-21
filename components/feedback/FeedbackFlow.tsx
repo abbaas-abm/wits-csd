@@ -58,12 +58,12 @@ export function FeedbackFlow({
   return (
     <div className="flex flex-col items-center">
       <Image
-        src="/slc-logo.png"
+        src="/wits-logo-light.png"
         alt="University of the Witwatersrand"
-        width={240}
-        height={54}
+        width={164}
+        height={100}
         priority
-        className="h-9 w-auto"
+        className="h-12 w-auto"
       />
 
       {step !== "done" && (

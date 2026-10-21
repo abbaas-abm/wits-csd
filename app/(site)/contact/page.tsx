@@ -31,7 +31,7 @@ export default function ContactPage() {
     <>
       <PageHero
         eyebrow="Contact & Location"
-        title="Get in touch with the CSD"
+        title="Get in touch with the Centre for Student Development (CSD)"
         subtitle="Have a question about our programmes, partnerships or events? Our team is here to help."
       />
 

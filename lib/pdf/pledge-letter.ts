@@ -79,11 +79,11 @@ export async function generatePledgeLetter(
   let logo = null;
   try {
     const bytes = await readFile(
-      path.join(process.cwd(), "public", "slc-logo.png"),
+      path.join(process.cwd(), "public", "wits-logo-light.png"),
     );
     logo = await pdf.embedPng(bytes);
   } catch (error) {
-    console.error("Could not embed SLC logo:", error);
+    console.error("Could not embed Wits logo:", error);
   }
 
   const fullName =
@@ -100,7 +100,7 @@ export async function generatePledgeLetter(
 
   let cursor = H - 44;
   if (logo) {
-    const lh = 26;
+    const lh = 44;
     const lw = (logo.width / logo.height) * lh;
     page.drawImage(logo, { x: (W - lw) / 2, y: cursor - lh, width: lw, height: lh });
     cursor -= lh + 18;
@@ -202,7 +202,7 @@ export async function generatePledgeLetter(
     color: GOLD,
   });
   if (logo) {
-    const lh = 22;
+    const lh = 38;
     const lw = (logo.width / logo.height) * lh;
     page.drawImage(logo, {
       x: (W - lw) / 2,

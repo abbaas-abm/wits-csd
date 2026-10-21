@@ -78,11 +78,11 @@ export async function generateEventReport(
   let logo: PDFImage | null = null;
   try {
     const bytes = await readFile(
-      path.join(process.cwd(), "public", "slc-logo.png"),
+      path.join(process.cwd(), "public", "wits-logo-light.png"),
     );
     logo = await pdf.embedPng(bytes);
   } catch (error) {
-    console.error("Could not embed SLC logo:", error);
+    console.error("Could not embed Wits logo:", error);
   }
 
   function drawFooter(page: PDFPage) {
@@ -100,7 +100,7 @@ export async function generateEventReport(
       color: DARK_GOLD,
     });
     if (logo) {
-      const h = 20;
+      const h = 32;
       const w = (logo.width / logo.height) * h;
       page.drawImage(logo, {
         x: (W - w) / 2,
@@ -129,7 +129,7 @@ export async function generateEventReport(
 
     let cursor = H - 46;
     if (logo) {
-      const lh = 22;
+      const lh = 40;
       const lw = (logo.width / logo.height) * lh;
       page.drawImage(logo, { x: MARGIN, y: cursor - lh, width: lw, height: lh });
       cursor -= lh + 14;

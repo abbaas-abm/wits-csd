@@ -86,11 +86,11 @@ export function AdminShell({
             className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center"
           >
             <Image
-              src="/slc-logo.png"
-              alt="CSD"
-              width={150}
-              height={34}
-              className="h-7 w-auto group-data-[collapsible=icon]:hidden"
+              src="/wits-logo-light.png"
+              alt="Wits University"
+              width={148}
+              height={90}
+              className="h-9 w-auto group-data-[collapsible=icon]:hidden"
             />
             <span className="sr-only">CSD Admin</span>
           </Link>

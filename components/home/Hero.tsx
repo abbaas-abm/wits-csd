@@ -18,12 +18,12 @@ export function Hero() {
 
       <div className="relative z-10 mx-auto max-w-3xl px-6 py-20 text-center sm:py-24">
         <Image
-          src="/slc-logo.png"
+          src="/wits-logo-light.png"
           alt="University of the Witwatersrand"
-          width={260}
-          height={59}
+          width={164}
+          height={100}
           priority
-          className="mx-auto h-10 w-auto sm:h-12"
+          className="mx-auto h-12 w-auto sm:h-14"
         />
 
         <h1 className="mt-8 text-3xl font-semibold leading-tight text-balance text-white sm:text-5xl">

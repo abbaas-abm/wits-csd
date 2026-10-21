@@ -1,13 +1,13 @@
-import { LatestEventHero } from "@/components/home/LatestEventHero";
-import { HomeFeaturedSection } from "@/components/home/HomeFeaturedSection";
+import { AwardsHero } from "@/components/home/AwardsHero";
+import { AwardsGallery } from "@/components/home/AwardsGallery";
 
 export const revalidate = 60;
 
 export default function HomePage() {
   return (
     <div className="pwa:hidden">
-      <LatestEventHero />
-      <HomeFeaturedSection />
+      <AwardsHero />
+      <AwardsGallery />
     </div>
   );
 }

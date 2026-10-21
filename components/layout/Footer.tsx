@@ -21,9 +21,8 @@ export function Footer() {
             className="h-9 w-auto"
           />
           <p className="mt-4 max-w-md text-sm leading-relaxed text-gray-600">
-            The Centre for Student Development (CSD) integrates leadership,
-            civic engagement, governance and persistence support for students
-            across all faculties.
+            This platform is managed by the Development and Leadership Unit,
+            Centre for Student Development, a Division of Student Affairs.
           </p>
         </div>
 

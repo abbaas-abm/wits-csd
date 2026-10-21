@@ -179,12 +179,12 @@ export function AuthGateway({ redirectTo }: { redirectTo?: string }) {
 
       <aside className="relative hidden flex-col justify-between bg-primary p-10 text-white lg:flex">
         <Image
-          src="/slc-logo.png"
+          src="/wits-logo-light.png"
           alt="University of the Witwatersrand"
-          width={260}
-          height={59}
+          width={164}
+          height={100}
           priority
-          className="h-10 w-auto self-start"
+          className="h-12 w-auto self-start"
         />
         <div>
           <h2 className="text-2xl font-semibold leading-tight text-white">
@@ -204,12 +204,12 @@ export function AuthGateway({ redirectTo }: { redirectTo?: string }) {
       <div className="relative z-10 flex flex-col">
         <div className="flex items-center justify-center bg-primary px-6 py-5 lg:hidden">
           <Image
-            src="/slc-logo.png"
+            src="/wits-logo-light.png"
             alt="University of the Witwatersrand"
-            width={220}
-            height={50}
+            width={148}
+            height={90}
             priority
-            className="h-9 w-auto"
+            className="h-10 w-auto"
           />
         </div>
 

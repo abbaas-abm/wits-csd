@@ -49,11 +49,11 @@ export function VolunteerDashboard({
             aria-label="CSD home"
           >
             <Image
-              src="/slc-logo.png"
+              src="/wits-logo-light.png"
               alt="University of the Witwatersrand"
-              width={150}
-              height={34}
-              className="h-7 w-auto"
+              width={148}
+              height={90}
+              className="h-9 w-auto"
             />
           </Link>
           <Button

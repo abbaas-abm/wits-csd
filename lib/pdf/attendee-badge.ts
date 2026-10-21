@@ -206,10 +206,10 @@ export async function generateAttendeeBadge(
 
   try {
     const logoBytes = await readFile(
-      path.join(process.cwd(), "public", "slc-logo.png"),
+      path.join(process.cwd(), "public", "wits-logo-light.png"),
     );
     const logo = await pdf.embedPng(logoBytes);
-    const logoHeight = 22;
+    const logoHeight = 32;
     const logoWidth = (logo.width / logo.height) * logoHeight;
     page.drawImage(logo, {
       x: (PAGE_W - logoWidth) / 2,
@@ -218,7 +218,7 @@ export async function generateAttendeeBadge(
       height: logoHeight,
     });
   } catch (error) {
-    console.error("Could not embed SLC logo:", error);
+    console.error("Could not embed Wits logo:", error);
   }
 
   return pdf.save();
