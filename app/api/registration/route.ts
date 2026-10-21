@@ -7,6 +7,9 @@ import type { UserPosition } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+const NOT_INVITED_MESSAGE =
+  "This event is by invitation only. If you were invited, sign in with the email address your invitation was sent to, or contact Programmes.DLU@wits.ac.za.";
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   if (!supabase) {
@@ -40,6 +43,17 @@ export async function POST(request: Request) {
     );
   }
 
+  // Invite-only events: the database trigger enforces this too; checking here
+  // gives the user a clear message. If the function isn't installed yet the
+  // RPC errors and we fall through (the event can't be invite-only either).
+  const { data: invited, error: inviteError } = await supabase.rpc(
+    "is_invited",
+    { p_event_id: eventId },
+  );
+  if (!inviteError && invited === false) {
+    return NextResponse.json({ error: NOT_INVITED_MESSAGE }, { status: 403 });
+  }
+
   const { data: existing } = await supabase
     .from("registrations")
     .select("status")
@@ -62,6 +76,9 @@ export async function POST(request: Request) {
     .select("id")
     .single();
 
+  if (error?.message.includes("NOT_INVITED")) {
+    return NextResponse.json({ error: NOT_INVITED_MESSAGE }, { status: 403 });
+  }
   if (error || !registrationRow) {
     return NextResponse.json(
       { error: error?.message ?? "Could not create registration." },

@@ -38,6 +38,7 @@ import { EventAttendanceTab } from "@/components/admin/EventAttendanceTab";
 import { EventAnnouncementsTab } from "@/components/admin/EventAnnouncementsTab";
 import { EventFeaturedTab } from "@/components/admin/EventFeaturedTab";
 import { EventRemindersTab } from "@/components/admin/EventRemindersTab";
+import { EventInvitesTab } from "@/components/admin/EventInvitesTab";
 
 const TABS = [
   "Information",
@@ -53,7 +54,7 @@ const TABS = [
 ] as const;
 
 // Secondary tabs revealed by the "More" dropdown next to Preferences.
-const MORE_TABS = ["Featured", "Reminders"] as const;
+const MORE_TABS = ["Featured", "Reminders", "Invites"] as const;
 
 type Tab = (typeof TABS)[number] | (typeof MORE_TABS)[number];
 
@@ -602,6 +603,8 @@ export function EventEditor({
           <EventFeaturedTab event={event} />
         ) : tab === "Reminders" ? (
           <EventRemindersTab event={event} />
+        ) : tab === "Invites" ? (
+          <EventInvitesTab event={event} />
         ) : null}
       </div>
     </div>

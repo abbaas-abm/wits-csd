@@ -6,8 +6,9 @@
 export const AWARDS = {
   year: 2026,
   title: "Student Leadership Awards",
-  date: "2026-10-23T00:00:00+02:00",
-  dateLabel: "Friday, 23 October 2026",
+  // Matches the event's start time in admin (17:30 SAST).
+  date: "2026-10-23T17:30:00+02:00",
+  dateLabel: "Friday, 23 October 2026 · 17:30",
   dateShort: "23 October 2026",
 };
 
