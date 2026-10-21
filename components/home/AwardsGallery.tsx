@@ -26,9 +26,10 @@ export function AwardsGallery() {
               Honouring the students who lead Wits
             </h2>
             <p className="mt-3 text-base leading-relaxed text-gray-600">
-              Every year the Student Leadership Awards recognise the students
-              whose service, courage and vision shape life on campus and
-              beyond. Some moments from past ceremonies.
+              Every year the Student Leadership Awards recognise students whose
+              leadership, service, innovation and social impact give meaning to
+              the idea of #WitsForGood, on campus and in communities beyond the
+              University. Some moments from past ceremonies.
             </p>
           </div>
           <Button asChild variant="outline">

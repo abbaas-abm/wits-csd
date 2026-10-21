@@ -3,43 +3,43 @@ import {
   Award,
   CalendarDays,
   Crown,
+  GraduationCap,
   HeartHandshake,
+  Lightbulb,
   Mail,
-  Megaphone,
+  Rocket,
+  Trophy,
   Users,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { AWARDS, AWARDS_PHOTOS } from "@/lib/awards";
+import {
+  AWARDS,
+  AWARDS_ABOUT,
+  AWARDS_CATEGORIES,
+  AWARDS_ENQUIRIES,
+  AWARDS_PHOTOS,
+  AWARDS_THEMES,
+} from "@/lib/awards";
 
-const RECOGNISES: { icon: LucideIcon; title: string; text: string }[] = [
-  {
-    icon: Crown,
-    title: "Individual leadership",
-    text: "Students who lead with integrity and lift others up, culminating in the Vice-Chancellor's Student Leader of the Year.",
-  },
-  {
-    icon: Users,
-    title: "Structures & societies",
-    text: "SRC, house committees, faculty councils, clubs and societies whose collective work strengthens the Wits community.",
-  },
-  {
-    icon: HeartHandshake,
-    title: "Service & citizenship",
-    text: "Volunteers and community builders whose outreach makes a lasting difference beyond the campus walls.",
-  },
-  {
-    icon: Megaphone,
-    title: "Governance & advocacy",
-    text: "Leaders who champion student voices through accountable, democratic and inclusive representation.",
-  },
+const THEME_ICONS: LucideIcon[] = [
+  GraduationCap,
+  Users,
+  Lightbulb,
+  HeartHandshake,
+  UsersRound,
+  Rocket,
 ];
 
 /**
- * About page section on the Wits Student Leadership Awards. Anchored at
- * `#awards` so the homepage can link straight to it.
+ * About page section on the Wits Student Leadership Awards, using the
+ * official information pack wording. Anchored at `#awards` so the homepage
+ * can link straight to it.
  */
 export function AwardsAbout() {
+  const enquiriesHref = `mailto:${AWARDS_ENQUIRIES.email}?subject=${encodeURIComponent(AWARDS_ENQUIRIES.subject)}`;
+
   return (
     <>
       <section className="relative isolate overflow-hidden bg-primary text-white">
@@ -52,11 +52,7 @@ export function AwardsAbout() {
               The Wits Student Leadership Awards
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg">
-              Hosted by the Centre for Student Development, the Student
-              Leadership Awards are the University&apos;s annual celebration of
-              the students who lead, serve and inspire. They honour the
-              individuals and student structures whose commitment shapes a
-              vibrant, inclusive and engaged Wits.
+              {AWARDS_ABOUT}
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3 text-sm sm:text-base">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-white">
@@ -88,34 +84,33 @@ export function AwardsAbout() {
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div>
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C59B27]">
-                Why we celebrate
+                #WitsForGood
               </span>
               <h2 className="mt-3 text-2xl font-semibold leading-tight text-gray-900 sm:text-3xl">
-                Leadership that leaves a legacy
+                Celebrating leadership in line with Wits values
               </h2>
               <div className="mt-5 space-y-4 text-base leading-relaxed text-gray-600">
                 <p>
-                  Student leaders carry much of what makes Wits a community:
-                  they represent their peers, run societies and residences,
-                  mentor first-years and reach out to the communities around
-                  the University — often while balancing demanding studies.
+                  Nominees are students, student structures and community
+                  engagement projects that have promoted the values of the
+                  University, demonstrated exemplary leadership, and advanced
+                  diversity, inclusiveness, social justice and transformation
+                  in the student community.
                 </p>
                 <p>
-                  The awards evening brings these leaders together with
-                  University leadership, staff and guests to recognise their
-                  contribution, share their stories and inspire the next
-                  generation of leaders. The highest honour of the night is
-                  the{" "}
+                  Any registered Wits student could nominate themselves,
+                  another student, an officially recognised student structure
+                  or organisation, or a community engagement project.
+                  Nominations for {AWARDS.year} closed on 30 September{" "}
+                  {AWARDS.year}.
+                </p>
+                <p>
+                  The ceremony takes place on {AWARDS.dateShort} and is by
+                  invitation only. The highest honour of the evening is the{" "}
                   <span className="font-medium text-gray-900">
                     Vice-Chancellor&apos;s Student Leader of the Year
                   </span>
                   .
-                </p>
-                <p>
-                  The {AWARDS.year} ceremony takes place on{" "}
-                  {AWARDS.dateShort}. Attendance is by
-                  invitation only — nominees and guests will receive their
-                  invitation and event details directly.
                 </p>
               </div>
             </div>
@@ -154,27 +149,88 @@ export function AwardsAbout() {
           <div className="mt-16">
             <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
               <Award className="size-5 text-[#C59B27]" />
-              What the awards recognise
+              Leadership themes
             </h3>
-            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {RECOGNISES.map((item) => {
-                const Icon = item.icon;
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-600">
+              The contribution of students is recognised under six themes.
+            </p>
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {AWARDS_THEMES.map((theme, i) => {
+                const Icon = THEME_ICONS[i];
                 return (
-                  <Card key={item.title} className="h-full border-gray-200 p-6">
+                  <Card key={theme.title} className="h-full border-gray-200 p-6">
                     <div className="flex size-10 items-center justify-center rounded-lg bg-[#d9b45b]/15 text-[#a07a1c]">
                       <Icon className="size-5" />
                     </div>
                     <h4 className="mt-4 font-medium text-gray-900">
-                      {item.title}
+                      {theme.title}
                     </h4>
                     <p className="mt-2 text-sm leading-relaxed text-gray-600">
-                      {item.text}
+                      {theme.text}
                     </p>
                   </Card>
                 );
               })}
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="border-t border-gray-200 bg-slate-50 py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C59B27]">
+              {AWARDS.year} awards
+            </span>
+            <h2 className="mt-3 text-2xl font-semibold leading-tight text-gray-900 sm:text-3xl">
+              Award categories
+            </h2>
+          </div>
+
+          <div className="mt-8 overflow-hidden rounded-2xl bg-primary p-6 text-white shadow-lg sm:p-8">
+            <div className="flex items-start gap-4">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#d9b45b] text-primary">
+                <Crown className="size-6" />
+              </span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#d9b45b]">
+                  Highest honour
+                </p>
+                <h3 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
+                  Vice-Chancellor&apos;s Student Leader of the Year
+                </h3>
+                <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/80">
+                  For a change-maker who has promoted equality and inclusivity
+                  on campus, inspired student leadership, championed Wits
+                  values and Graduate Attributes, and helped create and advance
+                  global knowledge.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {AWARDS_CATEGORIES.map((category) => (
+              <li
+                key={category}
+                className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-sm font-medium text-gray-900"
+              >
+                <Trophy className="mt-0.5 size-4 shrink-0 text-[#C59B27]" />
+                {category}
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-10 text-sm text-gray-600">
+            For enquiries, please email{" "}
+            <a
+              href={enquiriesHref}
+              className="font-medium text-primary underline underline-offset-4"
+            >
+              {AWARDS_ENQUIRIES.email}
+            </a>{" "}
+            with the subject &ldquo;{AWARDS_ENQUIRIES.subject}&rdquo;.
+          </p>
         </div>
       </section>
     </>
