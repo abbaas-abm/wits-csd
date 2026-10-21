@@ -604,6 +604,12 @@ Proxy the domain through Cloudflare for TLS, HTTP/3, Brotli, WAF, rate limiting 
 git pull && docker compose up -d --build
 ```
 
+Or, from a dev machine whose SSH key is in the VPS's `authorized_keys`, push to `main` and run:
+
+```bash
+npm run deploy    # bash scripts/deploy.sh — pulls origin/main on the VPS, rebuilds, health-checks
+```
+
 ---
 
 ## Operations & monitoring
