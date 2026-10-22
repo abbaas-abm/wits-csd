@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { cn, initials } from "@/lib/utils";
 import type { EventRecord, UserPosition } from "@/lib/types";
+import { wristbandSwatch } from "@/lib/wristbands";
 
 type Phase =
   | "scanning"
@@ -41,6 +42,7 @@ interface ScannedAttendee {
   id: string;
   name: string;
   position: UserPosition | null;
+  wristband: string | null;
 }
 
 interface RegistrantSuggestion {
@@ -122,9 +124,11 @@ export function QrScanner({
           return;
         }
 
+        // "*" rather than naming wristband_color, so check-in keeps working
+        // before supabase/fixes/wristbands.sql has been run.
         const { data: registration } = await supabase
           .from("registrations")
-          .select("position, status")
+          .select("*")
           .eq("event_id", event.id)
           .eq("attendee_id", profile.id)
           .maybeSingle();
@@ -138,6 +142,7 @@ export function QrScanner({
             id: profile.id,
             name,
             position: (registration?.position as UserPosition) ?? null,
+            wristband: null,
           });
           setPhase("no-registration");
           return;
@@ -147,6 +152,7 @@ export function QrScanner({
           id: profile.id,
           name,
           position: registration.position as UserPosition,
+          wristband: (registration.wristband_color as string | null) ?? null,
         });
         setPhase("found");
       } catch (err) {
@@ -510,6 +516,7 @@ export function QrScanner({
                   </p>
                 </div>
               </div>
+              <WristbandNotice color={attendee.wristband} />
               <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
@@ -568,6 +575,7 @@ export function QrScanner({
                   </p>
                 </div>
               </div>
+              <WristbandNotice color={attendee.wristband} />
               <Button size="lg" className="w-full" onClick={resetInput}>
                 <ScanLine className="size-5" />
                 {resetLabel}
@@ -590,6 +598,7 @@ export function QrScanner({
                   </p>
                 </div>
               </div>
+              <WristbandNotice color={attendee.wristband} />
               <Button size="lg" className="w-full" onClick={resetInput}>
                 <ScanLine className="size-5" />
                 {resetLabel}
@@ -603,6 +612,22 @@ export function QrScanner({
           </Button>
         </footer>
       </div>
+    </div>
+  );
+}
+
+function WristbandNotice({ color }: { color: string | null }) {
+  if (!color) return null;
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+      <span
+        className="size-8 shrink-0 rounded-full border border-gray-300 bg-gray-200"
+        style={{ backgroundColor: wristbandSwatch(color) }}
+      />
+      <p className="text-sm text-gray-700">
+        Wristband:{" "}
+        <span className="text-base font-semibold text-gray-900">{color}</span>
+      </p>
     </div>
   );
 }
