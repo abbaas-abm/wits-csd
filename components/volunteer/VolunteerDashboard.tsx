@@ -4,7 +4,13 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { History, LogOut, MessageSquare, ScanLine } from "lucide-react";
+import {
+  History,
+  LayoutDashboard,
+  LogOut,
+  MessageSquare,
+  ScanLine,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,16 +62,29 @@ export function VolunteerDashboard({
               className="h-9 w-auto"
             />
           </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
-          >
-            <LogOut className="size-4" />
-            Sign out
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* /user sends admins on to /admin. */}
+            <Button
+              asChild
+              size="sm"
+              className="bg-white text-primary hover:bg-slate-100"
+            >
+              <Link href="/user">
+                <LayoutDashboard className="size-4" />
+                Dashboard
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+            >
+              <LogOut className="size-4" />
+              Sign out
+            </Button>
+          </div>
         </div>
         <div className="mx-auto max-w-2xl px-4 pb-4">
           <h1 className="text-xl font-semibold text-white">
