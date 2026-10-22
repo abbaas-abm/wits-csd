@@ -1,7 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, Loader2, Search, Users, Watch, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Loader2,
+  Plus,
+  Search,
+  Users,
+  Watch,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,7 +20,8 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   WRISTBAND_COLORS,
-  normalizeWristband,
+  formatWristbands,
+  parseWristbands,
   wristbandSwatch,
 } from "@/lib/wristbands";
 
@@ -21,7 +30,7 @@ interface Registrant {
   name: string;
   email: string;
   personNumber: string | null;
-  color: string | null;
+  colors: string[];
 }
 
 interface Unmatched {
@@ -29,10 +38,20 @@ interface Unmatched {
   reason: string;
 }
 
+// Replace a person's colours with the selection, or add the selection to them.
+type Mode = "replace" | "add";
+
 const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const PAGE = 1000;
 // Keeps the ?id=in.(...) filter well under URL length limits.
 const UPDATE_CHUNK = 100;
+
+const sameColors = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((c) => b.includes(c));
+
+function applyMode(current: string[], selected: string[], mode: Mode) {
+  return mode === "add" ? [...new Set([...current, ...selected])] : selected;
+}
 
 function Swatch({ color, className }: { color: string; className?: string }) {
   return (
@@ -46,17 +65,42 @@ function Swatch({ color, className }: { color: string; className?: string }) {
   );
 }
 
+function ColorChip({
+  color,
+  onRemove,
+}: {
+  color: string;
+  onRemove?: () => void;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-800">
+      <Swatch color={color} />
+      {color}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove ${color}`}
+          className="-mr-1 text-gray-400 hover:text-gray-700"
+        >
+          <X className="size-3" />
+        </button>
+      )}
+    </span>
+  );
+}
+
 /**
  * Match pasted rows against people registered for the event. One person per
- * line: email, student/staff number or full name, optionally followed by a
- * colour (commas, semicolons or tabs, so Excel columns paste straight in).
- * Lines without a colour get the default colour.
+ * line: email, student/staff number or full name, optionally followed by one
+ * or more colours (commas, semicolons or tabs, so Excel columns paste straight
+ * in). Lines without a colour get the selected colours.
  */
 function parseList(
   text: string,
   registrants: Registrant[],
-  defaultColor: string,
-): { assignments: Map<string, string>; unmatched: Unmatched[] } {
+  selected: string[],
+): { assignments: Map<string, string[]>; unmatched: Unmatched[] } {
   const byEmail = new Map<string, Registrant>();
   const byNumber = new Map<string, Registrant>();
   const byName = new Map<string, Registrant[]>();
@@ -68,10 +112,15 @@ function parseList(
   }
   const knownColors = new Set([
     ...Object.keys(WRISTBAND_COLORS),
-    ...registrants.flatMap((r) => (r.color ? [r.color] : [])),
+    ...selected,
+    ...registrants.flatMap((r) => r.colors),
   ]);
+  const isColorCell = (cell: string) => {
+    const colors = parseWristbands(cell);
+    return colors.length > 0 && colors.every((c) => knownColors.has(c));
+  };
 
-  const assignments = new Map<string, string>();
+  const assignments = new Map<string, string[]>();
   const unmatched: Unmatched[] = [];
 
   for (const line of text.split(/\r?\n/)) {
@@ -117,15 +166,19 @@ function parseList(
       continue;
     }
 
-    const colorCell = cells.find(
-      (cell, i) => i !== personCell && knownColors.has(normalizeWristband(cell)),
-    );
-    const color = colorCell ? normalizeWristband(colorCell) : defaultColor;
-    if (!color) {
+    const lineColors = [
+      ...new Set(
+        cells
+          .filter((cell, i) => i !== personCell && isColorCell(cell))
+          .flatMap(parseWristbands),
+      ),
+    ];
+    const colors = lineColors.length ? lineColors : selected;
+    if (colors.length === 0) {
       unmatched.push({ line, reason: "No colour on this line or selected above." });
       continue;
     }
-    assignments.set(person.id, color);
+    assignments.set(person.id, colors);
   }
 
   return { assignments, unmatched };
@@ -135,14 +188,16 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
   const [registrants, setRegistrants] = React.useState<Registrant[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [setupMissing, setSetupMissing] = React.useState(false);
+  const [selected, setSelected] = React.useState<string[]>([]);
   const [colorInput, setColorInput] = React.useState("");
+  const [mode, setMode] = React.useState<Mode>("replace");
   const [text, setText] = React.useState("");
   const [busy, setBusy] = React.useState<string | null>(null);
   const [unmatched, setUnmatched] = React.useState<Unmatched[]>([]);
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<string | null>(null);
 
-  const color = normalizeWristband(colorInput);
+  const selectionLabel = selected.join(" + ");
 
   React.useEffect(() => {
     let active = true;
@@ -184,7 +239,7 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
               .join(" "),
             email: attendee?.email?.toLowerCase() ?? "",
             personNumber: attendee?.person_number?.trim().toLowerCase() || null,
-            color: wristband_color,
+            colors: parseWristbands(wristband_color),
           });
         }
         if ((data ?? []).length < PAGE) break;
@@ -198,37 +253,59 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
     };
   }, [event.id]);
 
+  // People with several wristbands count once under each colour.
   const groups = React.useMemo(() => {
     const counts = new Map<string, number>();
     for (const r of registrants) {
-      if (r.color) counts.set(r.color, (counts.get(r.color) ?? 0) + 1);
+      for (const c of r.colors) counts.set(c, (counts.get(c) ?? 0) + 1);
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [registrants]);
-  const unassigned = registrants.filter((r) => !r.color);
+  const unassigned = registrants.filter((r) => r.colors.length === 0);
 
   const term = query.trim().toLowerCase();
   const shown = registrants.filter(
     (r) =>
       (filter === null ||
-        (filter === "" ? !r.color : r.color === filter)) &&
+        (filter === "" ? r.colors.length === 0 : r.colors.includes(filter))) &&
       (!term ||
         r.name.toLowerCase().includes(term) ||
         r.email.includes(term) ||
         (r.personNumber ?? "").includes(term)),
   );
 
-  /** Save colours (null clears) and mirror them locally. */
-  async function save(changes: Map<string, string | null>, label: string) {
-    if (changes.size === 0) return false;
-    const byColor = new Map<string | null, string[]>();
-    for (const [id, value] of changes) {
-      byColor.set(value, [...(byColor.get(value) ?? []), id]);
+  function toggleColor(color: string) {
+    setSelected((prev) =>
+      prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color],
+    );
+  }
+
+  function addTypedColors() {
+    const typed = parseWristbands(colorInput);
+    if (typed.length === 0) return;
+    setSelected((prev) => [...new Set([...prev, ...typed])]);
+    setColorInput("");
+  }
+
+  /** Save each person's full colour list and mirror it locally. */
+  async function save(changes: Map<string, string[]>, label: string) {
+    const current = new Map(registrants.map((r) => [r.id, r.colors]));
+    for (const [id, colors] of changes) {
+      if (sameColors(current.get(id) ?? [], colors)) changes.delete(id);
+    }
+    if (changes.size === 0) {
+      toast.info("Nothing to change.");
+      return false;
+    }
+    const byValue = new Map<string | null, string[]>();
+    for (const [id, colors] of changes) {
+      const value = formatWristbands(colors);
+      byValue.set(value, [...(byValue.get(value) ?? []), id]);
     }
     setBusy(label);
     try {
       const supabase = createClient();
-      for (const [value, ids] of byColor) {
+      for (const [value, ids] of byValue) {
         for (let i = 0; i < ids.length; i += UPDATE_CHUNK) {
           const { error } = await supabase
             .from("registrations")
@@ -239,9 +316,10 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
         }
       }
       setRegistrants((prev) =>
-        prev.map((r) =>
-          changes.has(r.id) ? { ...r, color: changes.get(r.id) ?? null } : r,
-        ),
+        prev.map((r) => {
+          const next = changes.get(r.id);
+          return next ? { ...r, colors: next } : r;
+        }),
       );
       return true;
     } catch (error) {
@@ -262,7 +340,7 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
     const { assignments, unmatched: missed } = parseList(
       text,
       registrants,
-      color,
+      selected,
     );
     setUnmatched(missed);
     if (assignments.size === 0) {
@@ -273,58 +351,85 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
       );
       return;
     }
-    if (await save(assignments, "list")) {
+    const byId = new Map(registrants.map((r) => [r.id, r]));
+    const changes = new Map(
+      [...assignments].map(([id, colors]) => [
+        id,
+        applyMode(byId.get(id)?.colors ?? [], colors, mode),
+      ]),
+    );
+    const count = changes.size;
+    if (await save(changes, "list")) {
       setText("");
       toast.success(
-        `Wristband colour set for ${people(assignments.size)}.` +
+        `Wristbands updated for ${people(count)}.` +
           (missed.length ? ` ${missed.length} line(s) not matched.` : ""),
       );
     }
   }
 
   async function assignEveryone(onlyUnassigned: boolean) {
-    if (!color) {
-      toast.error("Choose a colour first.");
+    if (selected.length === 0) {
+      toast.error("Choose at least one colour first.");
       return;
     }
     const targets = onlyUnassigned ? unassigned : registrants;
     if (
       !onlyUnassigned &&
-      registrants.some((r) => r.color && r.color !== color) &&
+      mode === "replace" &&
+      registrants.some(
+        (r) => r.colors.length && !sameColors(r.colors, selected),
+      ) &&
       !window.confirm(
-        `Give all ${registrants.length} registered people a ${color} wristband? This replaces colours already assigned.`,
+        `Give all ${registrants.length} registered people ${selectionLabel}? This replaces colours already assigned.`,
       )
     ) {
       return;
     }
-    const changes = new Map(targets.map((r) => [r.id, color] as const));
+    const changes = new Map(
+      targets.map((r) => [r.id, applyMode(r.colors, selected, mode)] as const),
+    );
+    const count = changes.size;
     if (await save(changes, onlyUnassigned ? "unassigned" : "everyone")) {
-      toast.success(`${color} wristband set for ${people(changes.size)}.`);
+      toast.success(`${selectionLabel} set for ${people(count)}.`);
     }
   }
 
-  async function recolorGroup(from: string, to: string | null) {
-    const members = registrants.filter((r) => r.color === from);
+  /** Swap one colour for the selection (or remove it) for everyone who has it. */
+  async function recolorGroup(from: string, to: string[]) {
+    const members = registrants.filter((r) => r.colors.includes(from));
     if (
       !window.confirm(
-        to
-          ? `Change all ${members.length} ${from} wristbands to ${to}?`
+        to.length
+          ? `Change ${from} to ${to.join(" + ")} for ${people(members.length)}?`
           : `Remove the ${from} wristband from ${people(members.length)}?`,
       )
     ) {
       return;
     }
-    const changes = new Map(members.map((r) => [r.id, to] as const));
+    const changes = new Map<string, string[]>(
+      members.map((r) => {
+        const index = r.colors.indexOf(from);
+        const next = [
+          ...r.colors.slice(0, index),
+          ...to,
+          ...r.colors.slice(index + 1),
+        ];
+        return [r.id, [...new Set(next)]];
+      }),
+    );
     if (await save(changes, `group:${from}`)) {
-      if (filter === from) setFilter(to);
+      if (filter === from) setFilter(to[0] ?? null);
       toast.success(
-        to ? `${from} wristbands changed to ${to}.` : `${from} wristbands removed.`,
+        to.length
+          ? `${from} changed to ${to.join(" + ")}.`
+          : `${from} wristbands removed.`,
       );
     }
   }
 
-  async function setOne(r: Registrant, value: string | null) {
-    await save(new Map([[r.id, value]]), `one:${r.id}`);
+  async function setOne(r: Registrant, colors: string[]) {
+    await save(new Map([[r.id, colors]]), `one:${r.id}`);
   }
 
   if (loading) {
@@ -354,20 +459,41 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Wristbands</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Assign a wristband colour to people registered for this event.
-          Volunteers see the colour when they check someone in.
+          Assign one or more wristband colours to people registered for this
+          event. Volunteers see the colours when they check someone in.
         </p>
       </div>
 
-      <Card className="space-y-3 border-gray-200 p-5">
-        <p className="text-sm font-medium text-gray-900">Colour</p>
-        <div className="flex items-center gap-3">
-          {color && <Swatch color={color} className="size-6" />}
+      <Card className="space-y-4 border-gray-200 p-5">
+        <div>
+          <p className="text-sm font-medium text-gray-900">Colours</p>
+          <p className="text-xs text-muted-foreground">
+            Pick one or more. The actions below use this selection.
+          </p>
+        </div>
+        <div className="flex min-h-9 flex-wrap items-center gap-2">
+          {selected.length === 0 ? (
+            <span className="text-sm text-muted-foreground">
+              No colours selected
+            </span>
+          ) : (
+            selected.map((c) => (
+              <ColorChip key={c} color={c} onRemove={() => toggleColor(c)} />
+            ))
+          )}
+        </div>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            addTypedColors();
+          }}
+        >
           <Input
             value={colorInput}
             onChange={(e) => setColorInput(e.target.value)}
             list="wristband-colours"
-            placeholder="Type or pick a colour, e.g. Blue"
+            placeholder="Type a colour, e.g. Gold or Blue + Gold"
             className="max-w-xs"
           />
           <datalist id="wristband-colours">
@@ -380,16 +506,21 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
               <option key={name} value={name} />
             ))}
           </datalist>
-        </div>
+          <Button type="submit" variant="outline" disabled={!colorInput.trim()}>
+            <Plus className="size-4" />
+            Add
+          </Button>
+        </form>
         <div className="flex flex-wrap gap-2">
           {Object.keys(WRISTBAND_COLORS).map((name) => (
             <button
               key={name}
               type="button"
-              onClick={() => setColorInput(name)}
+              onClick={() => toggleColor(name)}
+              aria-pressed={selected.includes(name)}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
-                color === name
+                selected.includes(name)
                   ? "border-primary bg-primary/5 font-medium text-primary"
                   : "border-gray-200 text-gray-700 hover:bg-gray-50",
               )}
@@ -399,16 +530,43 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
             </button>
           ))}
         </div>
+        <div>
+          <p className="mb-2 text-xs font-medium text-gray-700">
+            When someone already has a wristband
+          </p>
+          <div className="inline-flex rounded-full bg-gray-100 p-1">
+            {(
+              [
+                ["replace", "Replace their colours"],
+                ["add", "Add to their colours"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setMode(value)}
+                className={cn(
+                  "rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors",
+                  mode === value
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </Card>
 
       <Card className="space-y-3 border-gray-200 p-5">
         <div>
           <p className="text-sm font-medium text-gray-900">Assign by list</p>
           <p className="text-xs text-muted-foreground">
-            One person per line: email, student/staff number or full name. Add a
-            colour after it (e.g. <code>1234567, Gold</code>) to override the
-            colour above. Only people already registered for this event are
-            matched.
+            One person per line: email, student/staff number or full name. Add
+            colours after it (e.g. <code>1234567, Gold, Blue</code>) to use
+            those instead of the selection above. Only people already registered
+            for this event are matched.
           </p>
         </div>
         <Textarea
@@ -416,7 +574,7 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
           onChange={(e) => setText(e.target.value)}
           rows={6}
           placeholder={
-            "1234567@students.wits.ac.za\n2345678, Gold\nThabo Nkosi, Blue\n(you can paste columns straight from Excel)"
+            "1234567@students.wits.ac.za\n2345678, Gold\nThabo Nkosi, Blue, Gold\n(you can paste columns straight from Excel)"
           }
         />
         <Button onClick={assignList} disabled={busy !== null || !text.trim()}>
@@ -460,13 +618,17 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
         <div>
           <p className="text-sm font-medium text-gray-900">Assign to everyone</p>
           <p className="text-xs text-muted-foreground">
-            Uses the colour selected above.
+            {selected.length
+              ? `${mode === "add" ? "Adds" : "Gives"} ${selectionLabel}.`
+              : "Select colours above first."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             onClick={() => assignEveryone(false)}
-            disabled={busy !== null || !color || registrants.length === 0}
+            disabled={
+              busy !== null || selected.length === 0 || registrants.length === 0
+            }
           >
             {busy === "everyone" ? (
               <Loader2 className="size-4 animate-spin" />
@@ -478,7 +640,9 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
           <Button
             variant="outline"
             onClick={() => assignEveryone(true)}
-            disabled={busy !== null || !color || unassigned.length === 0}
+            disabled={
+              busy !== null || selected.length === 0 || unassigned.length === 0
+            }
           >
             {busy === "unassigned" && <Loader2 className="size-4 animate-spin" />}
             Only those without a wristband ({unassigned.length})
@@ -490,7 +654,8 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
         <div className="border-b border-gray-200 p-4">
           <p className="text-sm font-medium text-gray-900">Summary</p>
           <p className="text-xs text-muted-foreground">
-            Click a colour to filter the list below.
+            People with several wristbands count under each colour. Click a
+            colour to filter the list below.
           </p>
         </div>
         <ul className="divide-y divide-gray-100">
@@ -515,21 +680,25 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={busy !== null || !color || color === name}
-                  onClick={() => recolorGroup(name, color)}
+                  disabled={
+                    busy !== null ||
+                    selected.length === 0 ||
+                    sameColors(selected, [name])
+                  }
+                  onClick={() => recolorGroup(name, selected)}
                 >
                   {busy === `group:${name}` && (
                     <Loader2 className="size-4 animate-spin" />
                   )}
-                  {color && color !== name
-                    ? `Change all to ${color}`
-                    : "Change all to…"}
+                  {selected.length && !sameColors(selected, [name])
+                    ? `Change to ${selectionLabel}`
+                    : "Change to…"}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   disabled={busy !== null}
-                  onClick={() => recolorGroup(name, null)}
+                  onClick={() => recolorGroup(name, [])}
                 >
                   Clear
                 </Button>
@@ -589,57 +758,60 @@ export function EventWristbandsTab({ event }: { event: { id: string } }) {
           </p>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {shown.map((r) => (
-              <li
-                key={r.id}
-                className="flex flex-col gap-2 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-gray-900">
-                    {r.name || r.email}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {[r.email, r.personNumber].filter(Boolean).join(" · ")}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {r.color ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-800">
-                      <Swatch color={r.color} />
-                      {r.color}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      No wristband
-                    </span>
-                  )}
-                  {color && color !== r.color && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={busy !== null}
-                      onClick={() => setOne(r, color)}
-                    >
-                      {busy === `one:${r.id}` && (
-                        <Loader2 className="size-4 animate-spin" />
-                      )}
-                      Set {color}
-                    </Button>
-                  )}
-                  {r.color && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={busy !== null}
-                      onClick={() => setOne(r, null)}
-                      aria-label={`Remove wristband from ${r.name || r.email}`}
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
+            {shown.map((r) => {
+              const next = applyMode(r.colors, selected, mode);
+              return (
+                <li
+                  key={r.id}
+                  className="flex flex-col gap-2 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-gray-900">
+                      {r.name || r.email}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {[r.email, r.personNumber].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {r.colors.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">
+                        No wristband
+                      </span>
+                    ) : (
+                      r.colors.map((c) => (
+                        <ColorChip
+                          key={c}
+                          color={c}
+                          onRemove={
+                            busy === null
+                              ? () =>
+                                  setOne(
+                                    r,
+                                    r.colors.filter((x) => x !== c),
+                                  )
+                              : undefined
+                          }
+                        />
+                      ))
+                    )}
+                    {selected.length > 0 && !sameColors(next, r.colors) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy !== null}
+                        onClick={() => setOne(r, next)}
+                      >
+                        {busy === `one:${r.id}` && (
+                          <Loader2 className="size-4 animate-spin" />
+                        )}
+                        {mode === "add" ? "Add" : "Set"} {selectionLabel}
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>

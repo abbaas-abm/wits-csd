@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { cn, initials } from "@/lib/utils";
 import type { EventRecord, UserPosition } from "@/lib/types";
-import { wristbandSwatch } from "@/lib/wristbands";
+import { parseWristbands, wristbandSwatch } from "@/lib/wristbands";
 
 type Phase =
   | "scanning"
@@ -617,17 +617,26 @@ export function QrScanner({
 }
 
 function WristbandNotice({ color }: { color: string | null }) {
-  if (!color) return null;
+  const colors = parseWristbands(color);
+  if (colors.length === 0) return null;
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-      <span
-        className="size-8 shrink-0 rounded-full border border-gray-300 bg-gray-200"
-        style={{ backgroundColor: wristbandSwatch(color) }}
-      />
-      <p className="text-sm text-gray-700">
-        Wristband:{" "}
-        <span className="text-base font-semibold text-gray-900">{color}</span>
+    <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+        {colors.length === 1
+          ? "Give wristband"
+          : `Give ${colors.length} wristbands`}
       </p>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+        {colors.map((c) => (
+          <span key={c} className="flex items-center gap-2">
+            <span
+              className="size-7 shrink-0 rounded-full border border-gray-300 bg-gray-200"
+              style={{ backgroundColor: wristbandSwatch(c) }}
+            />
+            <span className="text-base font-semibold text-gray-900">{c}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

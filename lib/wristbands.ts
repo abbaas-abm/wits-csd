@@ -30,6 +30,23 @@ export function normalizeWristband(value: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/**
+ * A person can get more than one wristband. registrations.wristband_color
+ * stores them as "Blue, Gold"; input may also use "+", "&", "/" or "and".
+ */
+export function parseWristbands(value: string | null | undefined): string[] {
+  if (!value) return [];
+  const colors = value
+    .split(/[,+&/]|\band\b/i)
+    .map(normalizeWristband)
+    .filter(Boolean);
+  return [...new Set(colors)];
+}
+
+export function formatWristbands(colors: string[]): string | null {
+  return colors.length ? colors.join(", ") : null;
+}
+
 /** CSS colour for a swatch: known palette first, then the name itself. */
 export function wristbandSwatch(color: string): string {
   return (
