@@ -54,31 +54,44 @@ export function EventAnnouncementsButton({
             </div>
             <div className="max-h-[24rem] space-y-3 overflow-y-auto p-4">
               {announcements.map((announcement) => (
-                <div
+                <AnnouncementBubble
                   key={announcement.id}
-                  className="rounded-2xl rounded-tl-sm border border-gray-200 bg-slate-50 p-3"
-                >
-                  <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
-                    {announcement.text}
-                  </p>
-                  {announcement.link_url && (
-                    <AnnouncementLink
-                      href={announcement.link_url}
-                      label={announcement.link_label}
-                      onNavigate={() => setOpen(false)}
-                    />
-                  )}
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {formatDate(announcement.created_at)} ·{" "}
-                    {formatTime(announcement.created_at)}
-                  </p>
-                </div>
+                  announcement={announcement}
+                  onNavigate={() => setOpen(false)}
+                />
               ))}
             </div>
           </div>
         </>
       )}
     </>
+  );
+}
+
+/** One announcement as attendees see it (also used for the admin preview). */
+export function AnnouncementBubble({
+  announcement,
+  onNavigate,
+}: {
+  announcement: Pick<Announcement, "text" | "link_url" | "link_label" | "created_at">;
+  onNavigate?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl rounded-tl-sm border border-gray-200 bg-slate-50 p-3">
+      <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
+        {announcement.text}
+      </p>
+      {announcement.link_url && (
+        <AnnouncementLink
+          href={announcement.link_url}
+          label={announcement.link_label}
+          onNavigate={onNavigate ?? (() => {})}
+        />
+      )}
+      <p className="mt-2 text-xs text-muted-foreground">
+        {formatDate(announcement.created_at)} · {formatTime(announcement.created_at)}
+      </p>
+    </div>
   );
 }
 

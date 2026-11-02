@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ArrowUpRight,
   BellRing,
+  Eye,
   Link2,
   Loader2,
   Mail,
@@ -28,6 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AnnouncementPreviewDialog,
+  type AnnouncementDraft,
+} from "@/components/admin/AnnouncementPreviewDialog";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatDate, formatTime } from "@/lib/utils";
 import {
@@ -87,6 +92,13 @@ export function EventAnnouncementsTab({
   const [posting, setPosting] = React.useState(false);
   const [sendingId, setSendingId] = React.useState<string | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  // What the preview dialog is showing: a new draft, or a posted
+  // announcement about to be sent again.
+  const [preview, setPreview] = React.useState<
+    | { kind: "new"; draft: AnnouncementDraft }
+    | { kind: "resend"; item: Announcement }
+    | null
+  >(null);
 
   React.useEffect(() => {
     let active = true;
@@ -240,13 +252,8 @@ export function EventAnnouncementsTab({
       );
   }
 
-  function confirmSend(): boolean {
-    const summary = describeSend();
-    if (!summary) return true;
-    return window.confirm(`This will send ${summary}. Continue?`);
-  }
-
-  async function post() {
+  /** Checks the form, then opens the preview. Nothing is posted yet. */
+  function openPreview() {
     const value = text.trim();
     if (!value) {
       toast.error("Please write an announcement first.");
@@ -260,19 +267,23 @@ export function EventAnnouncementsTab({
       );
       return;
     }
-    if (!confirmSend()) return;
+    setPreview({
+      kind: "new",
+      draft: {
+        text: value,
+        link_url: link,
+        link_label: link ? linkLabel.trim() || null : null,
+      },
+    });
+  }
 
+  async function post(draft: AnnouncementDraft) {
     setPosting(true);
     try {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("announcements")
-        .insert({
-          event_id: event.id,
-          text: value,
-          link_url: link,
-          link_label: link ? linkLabel.trim() || null : null,
-        })
+        .insert({ event_id: event.id, ...draft })
         .select("*")
         .single();
       if (error) {
@@ -290,6 +301,7 @@ export function EventAnnouncementsTab({
       setInternalPath("");
       setExternalUrl("");
       setLinkLabel("");
+      setPreview(null);
       toast.success("Announcement posted.");
       if (sendPush || (sendEmail && emailAllowed)) await notify(created.id);
     } catch (error) {
@@ -302,15 +314,19 @@ export function EventAnnouncementsTab({
     }
   }
 
-  async function resend(item: Announcement) {
+  function previewResend(item: Announcement) {
     if (!describeSend()) {
       toast.error("Turn on push or email under “Send to” first.");
       return;
     }
-    if (!confirmSend()) return;
+    setPreview({ kind: "resend", item });
+  }
+
+  async function resend(item: Announcement) {
     setSendingId(item.id);
     try {
       await notify(item.id);
+      setPreview(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Sending failed.");
     } finally {
@@ -528,13 +544,13 @@ export function EventAnnouncementsTab({
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={post} disabled={posting}>
-            {posting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+          <Button onClick={openPreview} disabled={posting}>
+            {posting ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
             {posting
               ? "Posting..."
               : sendPush || (sendEmail && emailAllowed)
-                ? "Post & send"
-                : "Post announcement"}
+                ? "Preview & send"
+                : "Preview & post"}
           </Button>
         </div>
       </Card>
@@ -584,7 +600,7 @@ export function EventAnnouncementsTab({
                     variant="ghost"
                     aria-label="Send again with the “Send to” settings above"
                     title="Send again with the “Send to” settings above"
-                    onClick={() => resend(item)}
+                    onClick={() => previewResend(item)}
                     disabled={sendingId === item.id}
                   >
                     {sendingId === item.id ? (
@@ -613,6 +629,42 @@ export function EventAnnouncementsTab({
           ))
         )}
       </div>
+
+      <AnnouncementPreviewDialog
+        open={preview !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreview(null);
+        }}
+        draft={
+          preview?.kind === "new"
+            ? preview.draft
+            : preview
+              ? {
+                  text: preview.item.text,
+                  link_url: preview.item.link_url,
+                  link_label: preview.item.link_label,
+                }
+              : null
+        }
+        eventId={event.id}
+        eventTitle={event.title}
+        push={sendPush}
+        email={sendEmail && emailAllowed}
+        subject={subject}
+        recipients={describeSend()}
+        confirmLabel={
+          preview?.kind === "resend"
+            ? "Send now"
+            : describeSend()
+              ? "Post & send"
+              : "Post announcement"
+        }
+        busy={posting || sendingId !== null}
+        onConfirm={() => {
+          if (preview?.kind === "new") void post(preview.draft);
+          else if (preview?.kind === "resend") void resend(preview.item);
+        }}
+      />
     </div>
   );
 }
