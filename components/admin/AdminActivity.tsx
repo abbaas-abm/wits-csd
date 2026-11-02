@@ -5,10 +5,13 @@ import {
   Activity,
   CalendarCheck,
   ChevronDown,
+  Download,
+  Images,
   KeyRound,
   Loader2,
   LogIn,
   Megaphone,
+  PlayCircle,
   QrCode,
   Search,
   ShieldAlert,
@@ -45,6 +48,8 @@ interface ActivityRow {
   user_agent: string | null;
   details: {
     error?: string;
+    name?: string | null;
+    album?: string | null;
     backfilled?: boolean;
     count?: number;
     photos?: number;
@@ -70,6 +75,7 @@ const CATEGORIES: { value: string; label: string; icon: LucideIcon; tone: string
   { value: "registrations", label: "Registrations", icon: CalendarCheck, tone: "bg-emerald-50 text-emerald-700" },
   { value: "check-ins", label: "Check-ins", icon: QrCode, tone: "bg-amber-50 text-amber-700" },
   { value: "engagement", label: "Engagement", icon: Sparkles, tone: "bg-pink-50 text-pink-700" },
+  { value: "gallery", label: "Gallery", icon: Images, tone: "bg-indigo-50 text-indigo-700" },
   { value: "content", label: "Content & admin", icon: Megaphone, tone: "bg-slate-100 text-slate-700" },
 ];
 
@@ -79,6 +85,8 @@ const STATS: { label: string; actions: string[]; icon: LucideIcon; alert?: boole
   { label: "Failed codes", actions: ["auth.otp_failed", "auth.otp_request_failed"], icon: ShieldAlert, alert: true },
   { label: "Registrations", actions: ["registrations.insert"], icon: CalendarCheck },
   { label: "Check-ins", actions: ["attendance.insert"], icon: QrCode },
+  { label: "Video views", actions: ["gallery.video_played"], icon: PlayCircle },
+  { label: "Downloads", actions: ["gallery.photo_downloaded", "gallery.video_downloaded"], icon: Download },
 ];
 
 const n = (value: number) => value.toLocaleString("en-ZA");
@@ -165,6 +173,14 @@ function describe(
       return <>{who(row.email, "Someone")} entered a wrong or expired code</>;
     case "auth.signed_out":
       return <>{who(subject ?? actor, "Someone")} signed out</>;
+    case "gallery.video_played":
+      return <>{who(subject, "A visitor")} watched <B>{row.details.name ?? "a video"}</B> in the {ev} gallery</>;
+    case "gallery.video_completed":
+      return <>{who(subject, "A visitor")} watched <B>{row.details.name ?? "a video"}</B> to the end</>;
+    case "gallery.video_downloaded":
+      return <>{who(subject, "A visitor")} downloaded the video <B>{row.details.name ?? ""}</B> from the {ev} gallery</>;
+    case "gallery.photo_downloaded":
+      return <>{who(subject, "A visitor")} downloaded a photo{row.details.album ? <> from <B>{row.details.album}</B></> : null} in the {ev} gallery</>;
   }
 
   switch (table) {
@@ -466,7 +482,8 @@ export function AdminActivity({
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Everything that happens on the platform: sign-ins, registrations,
-            check-ins, engagement and admin changes.
+            check-ins, engagement, gallery views and downloads, and admin
+            changes.
           </p>
         </div>
         <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -476,7 +493,7 @@ export function AdminActivity({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         {STATS.map((stat, i) => (
           <Card key={stat.label} className="gap-0 border-gray-200 p-4">
             <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -554,7 +571,8 @@ export function AdminActivity({
       ) : (
         <Card className="gap-0 overflow-hidden border-gray-200 p-0">
           {rows.map((row, index) => {
-            const meta = CATEGORIES.find((c) => c.value === row.category) ?? CATEGORIES[5];
+            const meta = CATEGORIES.find((c) => c.value === row.category) ??
+              CATEGORIES[CATEGORIES.length - 1];
             const day = dayLabel(row.created_at);
             const showDay =
               index === 0 || day !== dayLabel(rows[index - 1].created_at);

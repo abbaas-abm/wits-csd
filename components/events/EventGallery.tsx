@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Download, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logGalleryActivity } from "@/lib/activity";
 import {
   galleryDownloadUrl,
   galleryVideos,
@@ -350,7 +351,13 @@ function DownloadLink({
       download
       aria-label={label}
       title={label}
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        logGalleryActivity(
+          item.media_type === "video" ? "video_downloaded" : "photo_downloaded",
+          item,
+        );
+      }}
       className={cn(
         "flex items-center justify-center rounded-full",
         className,
@@ -363,6 +370,15 @@ function DownloadLink({
 
 function ViewerVideo({ video }: { video: EventGalleryImage }) {
   const id = youTubeId(video.video_url);
+  // Record each view once per opening, however often it's paused/resumed.
+  const played = React.useRef(false);
+  const completed = React.useRef(false);
+
+  // A YouTube embed doesn't report playback, so opening it counts as a view.
+  React.useEffect(() => {
+    if (id) logGalleryActivity("video_played", video);
+  }, [id, video]);
+
   return (
     <div className="absolute inset-0 flex items-center justify-center px-2 sm:px-16">
       {id ? (
@@ -379,6 +395,16 @@ function ViewerVideo({ video }: { video: EventGalleryImage }) {
           controls
           autoPlay
           playsInline
+          onPlay={() => {
+            if (played.current) return;
+            played.current = true;
+            logGalleryActivity("video_played", video);
+          }}
+          onEnded={() => {
+            if (completed.current) return;
+            completed.current = true;
+            logGalleryActivity("video_completed", video);
+          }}
           className="max-h-full w-full max-w-6xl"
         />
       )}
