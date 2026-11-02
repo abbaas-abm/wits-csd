@@ -24,6 +24,7 @@ import { EventFeatured } from "@/components/events/EventFeatured";
 import { EventSideTabs } from "@/components/events/EventSideTabs";
 import { EventAnnouncementsButton } from "@/components/events/EventAnnouncementsButton";
 import { SectionPlaceholder } from "@/components/events/SectionPlaceholder";
+import { EventGalleryPreview } from "@/components/events/EventGalleryPreview";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getEventById,
@@ -31,6 +32,7 @@ import {
   getCachedSpeakersByEvent,
   getEventAnnouncements,
   getCachedEventFeatured,
+  getCachedEventGallery,
 } from "@/lib/data";
 import { cn, formatDate, formatTime, secondsUntil } from "@/lib/utils";
 import { sanitizeHtml, hasMarkup, richTextToPlain } from "@/lib/rich-text";
@@ -54,6 +56,7 @@ export default async function EventDetailPage(
     eventSpeakers,
     announcements,
     featured,
+    gallery,
     { supabase, user, profile },
   ] = await Promise.all([
     getEventById(id),
@@ -61,6 +64,7 @@ export default async function EventDetailPage(
     getCachedSpeakersByEvent(id),
     getEventAnnouncements(id),
     getCachedEventFeatured(id),
+    getCachedEventGallery(id),
     getCurrentUser(),
   ]);
 
@@ -263,6 +267,9 @@ export default async function EventDetailPage(
             {aboutSection}
             {programmeSection}
             {speakersSection}
+            {event.has_media && gallery.length > 0 && (
+              <EventGalleryPreview eventId={event.id} items={gallery} />
+            )}
           </div>
 
           <aside className="order-first min-w-0 space-y-6 lg:order-2 lg:sticky lg:top-20 lg:h-fit">

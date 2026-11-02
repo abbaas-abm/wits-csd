@@ -521,6 +521,36 @@ export const getCachedEventFeatured = unstable_cache(
   { revalidate: 60, tags: ["events"] },
 );
 
+export const getCachedEventGallery = unstable_cache(
+  async (eventId: string): Promise<EventGalleryImage[]> => {
+    const supabase = createAnonClient();
+    if (!supabase) return [];
+    try {
+      // Galleries can run to several hundred photos; PostgREST caps a
+      // response at 1000 rows, so page through to be safe.
+      const pageSize = 1000;
+      const items: EventGalleryImage[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from("event_gallery_images")
+          .select("*")
+          .eq("event_id", eventId)
+          .order("display_order", { ascending: true })
+          .order("created_at", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        items.push(...((data ?? []) as EventGalleryImage[]));
+        if (!data || data.length < pageSize) break;
+      }
+      return items;
+    } catch {
+      return [];
+    }
+  },
+  ["public-event-gallery"],
+  { revalidate: 300, tags: ["events"] },
+);
+
 export const getCachedRecentAnnouncements = unstable_cache(
   async (limit = 5): Promise<AnnouncementWithEvent[]> => {
     const supabase = createAnonClient();

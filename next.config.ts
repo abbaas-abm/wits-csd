@@ -17,6 +17,11 @@ const nextConfig: NextConfig = {
         hostname: "witscsd.co.za",
       },
       {
+        // Thumbnails for YouTube videos in event galleries.
+        protocol: "https",
+        hostname: "i.ytimg.com",
+      },
+      {
         protocol: "https",
         hostname: "www.witscsd.co.za",
       },

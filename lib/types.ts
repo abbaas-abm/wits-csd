@@ -101,13 +101,22 @@ export interface ProgramBlock {
   created_at: string;
 }
 
+export type GalleryMediaType = "image" | "video";
+
 export interface EventGalleryImage {
   id: string;
   event_id: string;
   file_name: string;
+  /** Image file, or a video's poster (or the video file itself). */
   image_url: string;
-  object_key: string;
+  object_key: string | null;
   display_order: number;
+  album: string | null;
+  media_type: GalleryMediaType;
+  /** YouTube link or uploaded video file; null for images. */
+  video_url: string | null;
+  width: number | null;
+  height: number | null;
   created_at: string;
 }
 
