@@ -64,7 +64,7 @@ export default async function EventGalleryPage(
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#d9b45b]">
             Gallery
           </p>
-          <h1 className="mx-auto mt-3 max-w-4xl text-3xl font-semibold leading-tight text-balance sm:text-5xl">
+          <h1 className="mx-auto mt-3 max-w-4xl text-3xl font-semibold leading-tight text-balance text-white sm:text-5xl">
             {event.title}
           </h1>
           <p className="mt-4 text-sm text-white/80 sm:text-base">
