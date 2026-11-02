@@ -81,7 +81,10 @@ export function EventMediaTab({ event }: { event: EventRecord }) {
         </div>
       </section>
 
-      <EventGalleryManager eventId={event.id} />
+      <EventGalleryManager
+        eventId={event.id}
+        initialCover={event.gallery_cover_url ?? null}
+      />
     </div>
   );
 }

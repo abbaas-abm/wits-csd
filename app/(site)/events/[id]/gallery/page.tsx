@@ -32,6 +32,7 @@ export default async function EventGalleryPage(
   const videoCount = galleryVideos(items).length;
   const photoCount = items.length - videoCount;
   const cover =
+    event.gallery_cover_url ??
     event.cover_image_url ??
     items.find((item) => item.media_type === "image")?.image_url ??
     null;

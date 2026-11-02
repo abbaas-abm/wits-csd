@@ -45,12 +45,39 @@ export async function sendPushToAll(
   supabase: SupabaseClient,
   payload: PushPayload,
 ): Promise<{ sent: number; failed: number }> {
-  if (!configure()) return { sent: 0, failed: 0 };
-
   const { data } = await supabase
     .from("push_subscriptions")
     .select("id, endpoint, keys");
-  const subscriptions = (data ?? []) as SubscriptionRow[];
+  return sendToSubscriptions(supabase, (data ?? []) as SubscriptionRow[], payload);
+}
+
+/**
+ * Sends a Web Push notification to the devices of the given users only (e.g.
+ * an event's attendees). Devices that opted in without signing in can't be
+ * matched to a user, so they are not included.
+ */
+export async function sendPushToUsers(
+  supabase: SupabaseClient,
+  userIds: string[],
+  payload: PushPayload,
+): Promise<{ sent: number; failed: number }> {
+  const subscriptions: SubscriptionRow[] = [];
+  for (let i = 0; i < userIds.length; i += 200) {
+    const { data } = await supabase
+      .from("push_subscriptions")
+      .select("id, endpoint, keys")
+      .in("user_id", userIds.slice(i, i + 200));
+    subscriptions.push(...((data ?? []) as SubscriptionRow[]));
+  }
+  return sendToSubscriptions(supabase, subscriptions, payload);
+}
+
+async function sendToSubscriptions(
+  supabase: SupabaseClient,
+  subscriptions: SubscriptionRow[],
+  payload: PushPayload,
+): Promise<{ sent: number; failed: number }> {
+  if (!configure()) return { sent: 0, failed: 0 };
 
   let sent = 0;
   let failed = 0;

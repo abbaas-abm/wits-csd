@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Megaphone, X } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ArrowUpRight, Megaphone, X } from "lucide-react";
 import { formatDate, formatTime } from "@/lib/utils";
+import { isInternalLink } from "@/lib/announcements";
 import type { Announcement } from "@/lib/types";
 
 export function EventAnnouncementsButton({
@@ -59,6 +61,13 @@ export function EventAnnouncementsButton({
                   <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
                     {announcement.text}
                   </p>
+                  {announcement.link_url && (
+                    <AnnouncementLink
+                      href={announcement.link_url}
+                      label={announcement.link_label}
+                      onNavigate={() => setOpen(false)}
+                    />
+                  )}
                   <p className="mt-2 text-xs text-muted-foreground">
                     {formatDate(announcement.created_at)} ·{" "}
                     {formatTime(announcement.created_at)}
@@ -70,5 +79,34 @@ export function EventAnnouncementsButton({
         </>
       )}
     </>
+  );
+}
+
+function AnnouncementLink({
+  href,
+  label,
+  onNavigate,
+}: {
+  href: string;
+  label: string | null;
+  onNavigate: () => void;
+}) {
+  const className =
+    "mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-wits-blue-dark";
+  const text = label?.trim() || (isInternalLink(href) ? "Open" : "Open link");
+
+  if (isInternalLink(href)) {
+    return (
+      <Link href={href} onClick={onNavigate} className={className}>
+        {text}
+        <ArrowRight className="size-3.5" />
+      </Link>
+    );
+  }
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      {text}
+      <ArrowUpRight className="size-3.5" />
+    </a>
   );
 }

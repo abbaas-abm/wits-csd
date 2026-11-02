@@ -5,8 +5,10 @@ import { deliverRegistrationEmail } from "@/lib/email/registration";
 import { deliverPledgeDocument } from "@/lib/email/pledge";
 import { deliverEventReport } from "@/lib/email/report";
 import { deliverReminderEmail } from "@/lib/email/reminder";
+import { deliverAnnouncementEmail } from "@/lib/email/announcement";
 import type { UserPosition } from "@/lib/types";
 import type {
+  AnnouncementJob,
   PledgeJob,
   RegistrationJob,
   ReportJob,
@@ -90,11 +92,29 @@ const reminderWorker = new Worker<ReminderJob>(
   { connection, concurrency: 5 },
 );
 
+const announcementWorker = new Worker<AnnouncementJob>(
+  "announcements",
+  async (job) => {
+    const supabase = createAdminClient();
+    await deliverAnnouncementEmail({
+      supabase,
+      announcementId: job.data.announcementId,
+      attendeeId: job.data.attendeeId,
+      subject: job.data.subject,
+      throwOnError: true,
+    });
+    log(job, `announcement processed for ${job.data.attendeeId}`);
+  },
+  // Shares Plunk's ~1000 emails/min with reminders; stay well under it.
+  { connection, concurrency: 5 },
+);
+
 for (const worker of [
   registrationWorker,
   pledgeWorker,
   reportWorker,
   reminderWorker,
+  announcementWorker,
 ]) {
   worker.on("failed", (job, error) => {
     console.error(
@@ -105,7 +125,7 @@ for (const worker of [
 }
 
 console.log(
-  "[worker] listening for registrations, pledges, reports, reminders",
+  "[worker] listening for registrations, pledges, reports, reminders, announcements",
 );
 
 async function shutdown(signal: string) {
@@ -115,6 +135,7 @@ async function shutdown(signal: string) {
     pledgeWorker.close(),
     reportWorker.close(),
     reminderWorker.close(),
+    announcementWorker.close(),
   ]);
   await connection.quit();
   process.exit(0);

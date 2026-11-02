@@ -36,6 +36,14 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || "/";
 
+  // Announcement links can point to other sites; open those in a new window
+  // rather than navigating an existing tab of the platform away.
+  const target = new URL(url, self.location.origin);
+  if (target.origin !== self.location.origin) {
+    event.waitUntil(self.clients.openWindow(target.href));
+    return;
+  }
+
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })

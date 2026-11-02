@@ -50,6 +50,8 @@ export interface EventRecord {
   featured_image_key: string | null;
   cover_image_url: string | null;
   cover_image_key: string | null;
+  /** Photo chosen as the gallery cover; null = use the cover image. */
+  gallery_cover_url: string | null;
   has_information: boolean;
   has_about: boolean;
   has_programme: boolean;
@@ -124,6 +126,9 @@ export interface Announcement {
   id: string;
   event_id: string | null;
   text: string;
+  /** Site path ("/events/…") or full https:// URL; null = no link. */
+  link_url: string | null;
+  link_label: string | null;
   created_at: string;
 }
 

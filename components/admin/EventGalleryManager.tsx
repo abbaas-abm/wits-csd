@@ -10,6 +10,7 @@ import {
   Loader2,
   Pencil,
   Play,
+  Star,
   Trash2,
   Video,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 import { revalidateEvents } from "@/lib/cache-actions";
 import {
   EVENT_IMAGE_BUCKET,
@@ -84,7 +86,14 @@ const byOrder = (a: EventGalleryImage, b: EventGalleryImage) =>
  * Admin gallery for an event: photos grouped into albums (one per uploaded
  * folder), plus videos. Photos are resized in the browser before upload.
  */
-export function EventGalleryManager({ eventId }: { eventId: string }) {
+export function EventGalleryManager({
+  eventId,
+  initialCover,
+}: {
+  eventId: string;
+  initialCover: string | null;
+}) {
+  const [coverUrl, setCoverUrl] = React.useState(initialCover);
   const [items, setItems] = React.useState<EventGalleryImage[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [progress, setProgress] = React.useState<UploadProgress | null>(null);
@@ -340,8 +349,35 @@ export function EventGalleryManager({ eventId }: { eventId: string }) {
       }
       const removed = new Set(chunk.map((item) => item.id));
       setItems((prev) => prev.filter((item) => !removed.has(item.id)));
+      if (chunk.some((item) => item.image_url === coverUrl)) {
+        await saveCover(null, false);
+      }
     }
     void revalidateEvents();
+  }
+
+  /** Sets (or clears) the photo used as the gallery page's cover. */
+  async function saveCover(url: string | null, announce = true) {
+    const previous = coverUrl;
+    setCoverUrl(url);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("events")
+      .update({ gallery_cover_url: url })
+      .eq("id", eventId);
+    if (error) {
+      setCoverUrl(previous);
+      toast.error(
+        /gallery_cover_url|schema cache/i.test(error.message)
+          ? "Choosing a cover needs a database update. Run supabase/fixes/announcement_links_gallery_cover.sql in the Supabase SQL editor."
+          : error.message,
+      );
+      return;
+    }
+    void revalidateEvents();
+    if (announce) {
+      toast.success(url ? "Gallery cover updated." : "Gallery cover reset.");
+    }
   }
 
   async function deleteAlbum(name: string) {
@@ -483,6 +519,47 @@ export function EventGalleryManager({ eventId }: { eventId: string }) {
         )}
       </Card>
 
+      {!loading && photoCount > 0 && (
+        <Card className="flex flex-col gap-4 border-gray-200 p-5 sm:flex-row sm:items-center">
+          <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:w-48">
+            {coverUrl ? (
+              <Image
+                src={coverUrl}
+                alt="Gallery cover"
+                fill
+                sizes="192px"
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                Event cover image
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Star className="size-4 text-[#C59B27]" />
+              Gallery cover
+            </h4>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {coverUrl
+                ? "Shown at the top of the gallery page and first on the event page's gallery card."
+                : "Using the event's cover image. Hover a photo below and click its star to choose one."}
+            </p>
+            {coverUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => saveCover(null)}
+              >
+                Use the event cover instead
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -601,24 +678,53 @@ export function EventGalleryManager({ eventId }: { eventId: string }) {
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-                  {shown.map((photo) => (
-                    <div
-                      key={photo.id}
-                      className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-slate-100"
-                    >
-                      <Image
-                        src={photo.image_url}
-                        alt={photo.file_name}
-                        fill
-                        sizes="160px"
-                        className="object-cover"
-                      />
-                      <DeleteButton
-                        busy={busy === photo.id}
-                        onClick={() => deleteOne(photo)}
-                      />
-                    </div>
-                  ))}
+                  {shown.map((photo) => {
+                    const isCover = photo.image_url === coverUrl;
+                    const coverLabel = isCover
+                      ? "Gallery cover (click to reset)"
+                      : "Set as gallery cover";
+                    return (
+                      <div
+                        key={photo.id}
+                        className={cn(
+                          "group relative aspect-square overflow-hidden rounded-lg border bg-slate-100",
+                          isCover
+                            ? "border-[#d9b45b] ring-2 ring-[#d9b45b]"
+                            : "border-gray-200",
+                        )}
+                      >
+                        <Image
+                          src={photo.image_url}
+                          alt={photo.file_name}
+                          fill
+                          sizes="160px"
+                          className="object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            saveCover(isCover ? null : photo.image_url)
+                          }
+                          aria-label={coverLabel}
+                          title={coverLabel}
+                          className={cn(
+                            "absolute left-1.5 top-1.5 flex size-7 items-center justify-center rounded-full shadow-sm transition-opacity focus-visible:opacity-100",
+                            isCover
+                              ? "bg-[#d9b45b] text-primary"
+                              : "bg-white/90 text-gray-600 opacity-0 hover:bg-white group-hover:opacity-100",
+                          )}
+                        >
+                          <Star
+                            className={cn("size-3.5", isCover && "fill-current")}
+                          />
+                        </button>
+                        <DeleteButton
+                          busy={busy === photo.id}
+                          onClick={() => deleteOne(photo)}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
                 {album.items.length > PREVIEW_COUNT && (
                   <button

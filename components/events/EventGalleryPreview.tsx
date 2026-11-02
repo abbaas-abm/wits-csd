@@ -12,17 +12,24 @@ import type { EventGalleryImage } from "@/lib/types";
 export function EventGalleryPreview({
   eventId,
   items,
+  coverUrl,
 }: {
   eventId: string;
   items: EventGalleryImage[];
+  coverUrl?: string | null;
 }) {
   const albums = groupAlbums(items);
   const videos = galleryVideos(items);
-  // One photo from each album first, so the collage shows the range.
-  const picks = [
+  // The chosen cover leads, then one photo from each album, so the collage
+  // shows the range.
+  const photos = [
     ...albums.map((album) => album.items[0]),
     ...albums.flatMap((album) => album.items.slice(1)),
-  ].slice(0, 5);
+  ];
+  const cover = photos.find((photo) => photo.image_url === coverUrl);
+  const picks = (
+    cover ? [cover, ...photos.filter((photo) => photo !== cover)] : photos
+  ).slice(0, 5);
   const photoCount = items.length - videos.length;
   const href = `/events/${eventId}/gallery`;
 

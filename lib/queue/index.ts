@@ -1,7 +1,12 @@
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 
-export type QueueName = "registrations" | "pledges" | "reports" | "reminders";
+export type QueueName =
+  | "registrations"
+  | "pledges"
+  | "reports"
+  | "reminders"
+  | "announcements";
 
 export interface RegistrationJob {
   registrationId: string;
@@ -31,6 +36,12 @@ export interface ReportJob {
 
 export interface ReminderJob {
   registrationId: string;
+}
+
+export interface AnnouncementJob {
+  announcementId: string;
+  attendeeId: string;
+  subject: string;
 }
 
 const globalForQueue = globalThis as unknown as {
@@ -77,6 +88,7 @@ function getQueues(): Record<QueueName, Queue> | null {
         pledges: makeQueue("pledges", connection),
         reports: makeQueue("reports", connection),
         reminders: makeQueue("reminders", connection),
+        announcements: makeQueue("announcements", connection),
       }
     : null;
   return globalForQueue.__conveoQueues;
@@ -99,11 +111,14 @@ export async function enqueue(
   queue: QueueName,
   jobName: string,
   data: object,
+  // A stable id makes BullMQ ignore a second copy of the same job.
+  jobId?: string,
 ): Promise<boolean> {
   const queues = getQueues();
   if (!queues) return false;
   try {
     const addPromise = queues[queue].add(jobName, data, {
+      ...(jobId ? { jobId } : {}),
       attempts: 6,
       backoff: { type: "exponential", delay: 10000 },
       removeOnComplete: 1000,

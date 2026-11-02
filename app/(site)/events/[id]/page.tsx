@@ -268,7 +268,11 @@ export default async function EventDetailPage(
             {programmeSection}
             {speakersSection}
             {event.has_media && gallery.length > 0 && (
-              <EventGalleryPreview eventId={event.id} items={gallery} />
+              <EventGalleryPreview
+                eventId={event.id}
+                items={gallery}
+                coverUrl={event.gallery_cover_url}
+              />
             )}
           </div>
 
