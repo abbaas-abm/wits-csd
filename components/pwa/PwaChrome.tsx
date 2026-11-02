@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn, initials } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
+import { logAuthActivity } from "@/lib/activity";
 
 const NAV_ITEMS = [
   { href: "/events", label: "Events", icon: CalendarDays },
@@ -70,6 +71,8 @@ export function PwaChrome() {
 
   async function handleSignOut() {
     const supabase = createClient();
+    // Log first: the session is needed to know who signed out.
+    logAuthActivity("signed_out");
     await supabase.auth.signOut();
     toast.success("Signed out.");
     // Hard redirect straight to the auth screen so the (now empty) dashboard

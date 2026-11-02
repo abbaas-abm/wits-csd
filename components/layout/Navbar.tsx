@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { cn, initials } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
+import { logAuthActivity } from "@/lib/activity";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -61,6 +62,8 @@ export function Navbar() {
     setSigningOut(true);
     try {
       const supabase = createClient();
+      // Log first: the session is needed to know who signed out.
+      logAuthActivity("signed_out");
       await supabase.auth.signOut();
       setProfile(null);
       toast.success("Signed out successfully");

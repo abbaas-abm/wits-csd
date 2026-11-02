@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/input-group";
 import { OtpInput } from "@/components/auth/OtpInput";
 import { createClient } from "@/lib/supabase/client";
+import { logAuthActivity } from "@/lib/activity";
 
 const emailSchema = z.object({
   email: z
@@ -67,7 +68,16 @@ export function AuthGateway({ redirectTo }: { redirectTo?: string }) {
     setSending(true);
     try {
       const target = values.email.trim();
-      await dispatchOtp(target);
+      try {
+        await dispatchOtp(target);
+      } catch (error) {
+        logAuthActivity("otp_request_failed", {
+          email: target,
+          error: error instanceof Error ? error.message : undefined,
+        });
+        throw error;
+      }
+      logAuthActivity("otp_requested", { email: target });
       setEmail(target);
       setOtp("");
       setStep("otp");
@@ -126,7 +136,11 @@ export function AuthGateway({ redirectTo }: { redirectTo?: string }) {
         token: code,
         type: "email",
       });
-      if (error) throw error;
+      if (error) {
+        logAuthActivity("otp_failed", { email, error: error.message });
+        throw error;
+      }
+      logAuthActivity("otp_verified", { email });
 
       const destination = data.user
         ? await resolveDestination(data.user.id, data.user.email)
@@ -152,9 +166,14 @@ export function AuthGateway({ redirectTo }: { redirectTo?: string }) {
     setResending(true);
     try {
       await dispatchOtp(email);
+      logAuthActivity("otp_resent", { email });
       setCooldown(30);
       toast.success("A new code is on its way.");
     } catch (error) {
+      logAuthActivity("otp_request_failed", {
+        email,
+        error: error instanceof Error ? error.message : undefined,
+      });
       toast.error(
         error instanceof Error ? error.message : "Could not resend the code.",
       );

@@ -19,6 +19,7 @@ import { HistoryPanel } from "@/components/volunteer/HistoryPanel";
 import { QnaPanel } from "@/components/volunteer/QnaPanel";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
+import { logAuthActivity } from "@/lib/activity";
 
 export function VolunteerDashboard({
   profile,
@@ -34,6 +35,8 @@ export function VolunteerDashboard({
     setSigningOut(true);
     try {
       const supabase = createClient();
+      // Log first: the session is needed to know who signed out.
+      logAuthActivity("signed_out");
       await supabase.auth.signOut();
       toast.success("Signed out successfully");
       router.push("/");

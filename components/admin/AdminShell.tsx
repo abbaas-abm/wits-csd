@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Activity,
   Building2,
   CalendarDays,
   FileSignature,
@@ -33,6 +34,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { initials } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
+import { logAuthActivity } from "@/lib/activity";
 
 const NAV_ITEMS = [
   { href: "/admin/profile", label: "Profile", icon: User },
@@ -43,6 +45,7 @@ const NAV_ITEMS = [
   { href: "/admin/reflections", label: "Reflections", icon: StickyNote },
   { href: "/admin/pledges", label: "Pledges", icon: FileSignature },
   { href: "/admin/questions", label: "Questions", icon: MessageSquare },
+  { href: "/admin/activity", label: "Activity", icon: Activity },
 ];
 
 export function AdminShell({
@@ -66,6 +69,8 @@ export function AdminShell({
     setSigningOut(true);
     try {
       const supabase = createClient();
+      // Log first: the session is needed to know who signed out.
+      logAuthActivity("signed_out");
       await supabase.auth.signOut();
       toast.success("Signed out successfully");
       router.push("/");
